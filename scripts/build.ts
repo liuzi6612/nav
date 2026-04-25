@@ -6,7 +6,15 @@ import fs from 'fs'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
 import timezone from 'dayjs/plugin/timezone.js'
-import { writeSEO, writeTemplate, spiderWeb, PATHS, getConfig } from './utils'
+import {
+  writeSEO,
+  writeTemplate,
+  spiderWebs,
+  PATHS,
+  getConfig,
+  fileWriteStream,
+  writePWA,
+} from './utils'
 import type { INavProps, ISettings } from '../src/types/index'
 
 dayjs.extend(utc)
@@ -25,10 +33,10 @@ const handleFileOperation = (operation: () => any): any => {
 }
 
 const db: INavProps[] = handleFileOperation(() =>
-  JSON.parse(fs.readFileSync(PATHS.db, 'utf-8'))
+  JSON.parse(fs.readFileSync(PATHS.db, 'utf-8')),
 )
 const settings: ISettings = handleFileOperation(() =>
-  JSON.parse(fs.readFileSync(PATHS.settings, 'utf-8'))
+  JSON.parse(fs.readFileSync(PATHS.settings, 'utf-8')),
 )
 
 const seoTemplate = writeSEO(db, { settings })
@@ -39,21 +47,28 @@ const html = writeTemplate({
 })
 
 handleFileOperation(() => fs.writeFileSync(PATHS.html.write, html))
+handleFileOperation(() =>
+  writePWA(
+    {
+      ...settings,
+      pwaIcon: '',
+    },
+    PATHS.manifestPublic,
+  ),
+)
 
 let errorUrlCount = 0
 
-process.on('exit', () => {
+process.on('exit', async () => {
   settings.errorUrlCount = errorUrlCount
-  handleFileOperation(() => {
-    fs.writeFileSync(PATHS.settings, JSON.stringify(settings))
-    fs.writeFileSync(PATHS.db, JSON.stringify(config.address ? [] : db))
+  fs.writeFileSync(PATHS.settings, JSON.stringify(settings))
+  await fileWriteStream(PATHS.db, config.address ? [] : db)
 
-    if (config.address) {
-      fs.writeFileSync(PATHS.serverdb, JSON.stringify(db))
-    }
-  })
+  if (config.address) {
+    await fileWriteStream(PATHS.serverdb, db)
+  }
   console.log('All success!')
 })
 
-const { errorUrlCount: count } = await spiderWeb(db, settings)
+const { errorUrlCount: count } = await spiderWebs(db, settings)
 errorUrlCount = count

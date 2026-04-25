@@ -19,7 +19,7 @@ import { $t } from 'src/locale'
   styleUrls: ['./index.component.scss'],
 })
 export class TagListComponent {
-  @Input() data: IWebTag[] = []
+  @Input() data?: IWebTag[] | undefined = []
   @Input() action: boolean = false
   @Output() onDelete = new EventEmitter<void>()
   @Output() onMove = new EventEmitter<void>()
@@ -27,8 +27,8 @@ export class TagListComponent {
 
   readonly $t = $t
   readonly isLogin = isLogin
-  readonly tagMap = tagMap
-  readonly permissions = getPermissions(settings)
+  readonly tagMap = tagMap()
+  readonly permissions = getPermissions(settings())
 
   constructor(public jumpService: JumpService) {}
 

@@ -36,7 +36,10 @@ export class OffWorkDrawerComponent {
   validateForm!: FormGroup
   index = 0
 
-  constructor(private fb: FormBuilder, private message: NzMessageService) {
+  constructor(
+    private fb: FormBuilder,
+    private message: NzMessageService,
+  ) {
     this.validateForm = this.fb.group({
       workTitle: [''],
       restTitle: [''],
@@ -48,7 +51,7 @@ export class OffWorkDrawerComponent {
   open(data: any, idx: number) {
     this.index = idx
     for (const k in data) {
-      this.validateForm.get(k)!?.setValue(data[k])
+      this.validateForm.get(k)?.setValue(data[k])
     }
     this.visible = true
   }

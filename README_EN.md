@@ -34,14 +34,19 @@
   />
 </picture>
 
+## Design Philosophy
+
+No database, no server, zero-cost one-click deployment, ready to use out of the box, yet capable of manipulating and saving data like a database.
+
+Easy to use, simple, and powerful.
+
+[Who is using it?](https://official.nav3.cn/?id=3)
+
 ## Features
-
-Three No-Needs: `No Database`, `No Server`, `No Cost`
-
-The philosophy of `Discovery Navigation` is to create a simple and convenient solution without relying on backend services, eliminating complex configurations and database concepts, making it ready to use out of the box.
 
 - 🍰 Built-in `800+` high-quality websites
 - 🍰 Support for [Gitee](https://gitee.com/xiejiahe/nav)
+- 🍰 Support for [GitLab](https://gitlab.com/xjh22222228/nav)
 - 🍰 Support for importing from browser bookmarks
 - 🍰 Support for exporting data to browser bookmarks
 - 🍰 Support for AI translation
@@ -60,6 +65,7 @@ The philosophy of `Discovery Navigation` is to create a simple and convenient so
 - 🍰 Support for multiple search queries
 - 🍰 Support for custom search engines
 - 🍰 Support for card advertisement display
+- 🍰 Support PWA applications
 - 🍰 Multiple high-value themes to switch between
 - 🍰 Powerful responsive system
 - 🍰 Various loading animations
@@ -85,17 +91,17 @@ Zero-cost deployment, as easy as counting `3-2-1`.
 
 #### gh-pages (Free)
 
-1. Click `Fork` in the top right corner.
+1. Click `Fork` in the upper right corner to fork this repository.
 
-2. Apply for a `token` at [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new), select appropriate permissions (select all if unsure), copy and save the Token; [For Gitee, click here](https://gitee.com/profile/personal_access_tokens/new)
+2. Request a token at [https://github.com/settings/tokens/new](https://github.com/settings/tokens/new), check **repo** and **workflow** permissions, then copy and save the Token.
 
-3. Add the token at https://github.com/your-username/nav/settings/secrets/actions/new, name it `TOKEN` in uppercase.
+3. Open https://github.com/your-username/nav/actions to ensure GitHub Actions are enabled.
 
-4. Open https://github.com/your-username/nav/actions to enable automatic deployment
+4. Modify the [gitRepoUrl](file:///Users/xiejiahe/NoCode/develop/open-source/nav/scripts/utils.ts#L64-L67) field in the root configuration file [nav.config.yaml](nav.config.yaml).
 
-5. Modify the `gitRepoUrl` field in the root configuration file [nav.config.yaml](nav.config.yaml)
+5. Visit https://your-username.github.io/nav to access your powerful navigation site.
 
-6. Open https://your-username.github.io/nav to see your powerful navigation website.
+If you encounter 404, open https://github.com/your-username/nav/settings/pages and verify if the deployment branch is set to **gh-pages**.
 
 #### Netlify (Recommended, Free)
 
@@ -107,6 +113,10 @@ build path `dist/browser`
 
 [https://github.com/apps/vercel](https://github.com/apps/vercel)
 
+#### Cloudflare pages (Recommended, Free)
+
+[https://www.cloudflare.com](https://www.cloudflare.com)
+
 ## Configuration
 
 Only need to modify the following fields in the root `nav.config.yaml`
@@ -114,26 +124,18 @@ Only need to modify the following fields in the root `nav.config.yaml`
 | --------------------------------------------- | -------- |--- |--- |
 |√ | | gitRepoUrl | Your repository URL |
 |√ | | branch | Deployment branch |
+|√ | | imageRepoUrl | Image repository, default `https://github.com/xjh22222228/image?branch=main` |
 |√ | √| hashMode | Whether to use Hash mode for routing, must be true for `github pages` |
+|√ | √| email | User submission notification |
 | | √| password | Self-deployment login password, not needed for `Fork` users |
 | | √| address | Self-deployment address |
-|√| √| email | User submission notification |
 | | √| mailConfig | Email configuration for self-deployment notifications |
-|√ | | imageRepoUrl | Image repository, default `https://github.com/xjh22222228/image?branch=main` |
 
 ## Backend
 
 Change the route to `system` to access, e.g., https://www.nav3.cn to https://www.nav3.cn/system
 
 ## Upgrade
-
-#### Automatic
-
-For `Fork` users only
-
-[Install Pull here](https://github.com/apps/pull), updates will automatically create Pull Requests for your repository.
-
-#### Manual
 
 Clone your repository and execute:
 

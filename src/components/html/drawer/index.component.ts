@@ -32,7 +32,7 @@ import { NzColorPickerModule } from 'ng-zorro-antd/color-picker'
 export class HTMLDrawerComponent {
   @Output() ok = new EventEmitter<void>()
 
-  $t = $t
+  readonly $t = $t
   visible = false
   validateForm!: FormGroup
   index = 0
@@ -48,7 +48,7 @@ export class HTMLDrawerComponent {
   open(data: any, idx: number) {
     this.index = idx
     for (const k in data) {
-      this.validateForm.get(k)!?.setValue(data[k])
+      this.validateForm.get(k)?.setValue(data[k])
     }
     this.visible = true
   }

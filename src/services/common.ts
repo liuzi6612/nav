@@ -2,9 +2,9 @@
 // Copyright @ 2018-present xiejiahe. All rights reserved.
 // See https://github.com/xjh22222228/nav
 
-import { Injectable } from '@angular/core'
+import { Injectable, computed } from '@angular/core'
 import { Router, ActivatedRoute } from '@angular/router'
-import { websiteList, settings } from 'src/store'
+import { navs, settings } from 'src/store'
 import {
   queryString,
   fuzzySearch,
@@ -12,16 +12,10 @@ import {
   getOverIndex,
   getClassById,
 } from 'src/utils'
-import {
-  setWebsiteList,
-  toggleCollapseAll,
-  deleteClassByIds,
-  deleteWebByIds,
-} from 'src/utils/web'
-import type { INavProps, INavThreeProp, IWebProps } from 'src/types'
+import { setNavs, toggleCollapseAll } from 'src/utils/web'
+import type { INavThreeProp } from 'src/types'
 import { isLogin, getPermissions } from 'src/utils/user'
 import { isSelfDevelop } from 'src/utils/utils'
-import { $t } from 'src/locale'
 import event from 'src/utils/mitt'
 
 @Injectable({
@@ -30,9 +24,9 @@ import event from 'src/utils/mitt'
 export class CommonService {
   readonly isLogin = isLogin
   readonly settings = settings
-  readonly permissions = getPermissions(settings)
-  readonly title: string = settings.title.trim().split(/\s/)[0]
-  websiteList: INavProps[] = websiteList
+  readonly permissions = getPermissions(settings())
+  readonly title = computed(() => settings().title.trim().split(/\s/)[0])
+  readonly navs = navs
   currentList: INavThreeProp[] = []
   twoIndex = 0
   oneIndex = 0
@@ -41,7 +35,10 @@ export class CommonService {
   searchKeyword = ''
   overIndex = Number.MAX_SAFE_INTEGER
 
-  constructor(private router: Router, private activatedRoute: ActivatedRoute) {
+  constructor(
+    private router: Router,
+    private activatedRoute: ActivatedRoute,
+  ) {
     const getData = () => {
       const { id, q } = queryString()
       const { oneIndex, twoIndex, threeIndex } = getClassById(id)
@@ -51,7 +48,7 @@ export class CommonService {
       this.searchKeyword = q
 
       if (q) {
-        this.currentList = fuzzySearch(websiteList, q)
+        this.currentList = fuzzySearch(this.navs(), q)
       } else {
         this.currentList = matchCurrentList()
       }
@@ -79,7 +76,8 @@ export class CommonService {
   }
 
   handleClickClass(id: number) {
-    this.router.navigate([this.router.url.split('?')[0]], {
+    this.router.navigate([], {
+      relativeTo: this.activatedRoute,
       queryParams: {
         id,
         _: Date.now(),
@@ -90,7 +88,7 @@ export class CommonService {
 
   onCollapseAll = (e?: Event) => {
     e?.stopPropagation()
-    toggleCollapseAll(websiteList)
+    toggleCollapseAll(this.navs())
   }
 
   trackByItem(a: any, item: any) {
@@ -103,7 +101,7 @@ export class CommonService {
 
   get collapsed() {
     try {
-      return !!websiteList[this.oneIndex].nav[this.twoIndex].collapsed
+      return !!this.navs()[this.oneIndex].nav[this.twoIndex].collapsed
     } catch {
       return false
     }
@@ -112,7 +110,7 @@ export class CommonService {
   onCollapse = (item: INavThreeProp) => {
     item.collapsed = !item.collapsed
     if (!isSelfDevelop) {
-      setWebsiteList(this.websiteList)
+      setNavs(this.navs())
     }
   }
 
@@ -128,61 +126,5 @@ export class CommonService {
 
   setOverIndex() {
     this.overIndex = Number.MAX_SAFE_INTEGER
-  }
-
-  async deleteWebByIds(ids: number[], data?: IWebProps) {
-    const isSame = this.isLogin && data?.['rId']
-
-    return new Promise((resolve) => {
-      event.emit('MODAL', {
-        nzTitle: $t('_confirmDel'),
-        nzContent: `ID${isSame ? `(${$t('_quote')})` : ''}: ${ids.join(',')}`,
-        nzWidth: 350,
-        nzOkType: 'primary',
-        nzOkDanger: true,
-        nzOkText: $t('_del'),
-        nzOnOk: async () => {
-          const ok = await deleteWebByIds(ids)
-          if (ok) {
-            event.emit('MESSAGE', {
-              type: 'success',
-              content: $t('_delSuccess'),
-            })
-          }
-          resolve(ok)
-        },
-        nzOnCancel: () => {
-          resolve(false)
-        },
-      })
-    })
-  }
-
-  async deleteClassByIds(ids: number[], data?: INavThreeProp) {
-    const isSame = this.isLogin && data?.['rId']
-
-    return new Promise((resolve) => {
-      event.emit('MODAL', {
-        nzTitle: $t('_confirmDel'),
-        nzContent: `ID${isSame ? `(${$t('_quote')})` : ''}: ${ids.join(',')}`,
-        nzWidth: 350,
-        nzOkType: 'primary',
-        nzOkDanger: true,
-        nzOkText: $t('_del'),
-        nzOnOk: async () => {
-          const ok = await deleteClassByIds(ids)
-          if (ok) {
-            event.emit('MESSAGE', {
-              type: 'success',
-              content: $t('_delSuccess'),
-            })
-          }
-          resolve(ok)
-        },
-        nzOnCancel: () => {
-          resolve(false)
-        },
-      })
-    })
   }
 }

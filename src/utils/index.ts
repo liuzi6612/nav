@@ -3,20 +3,20 @@
 // See https://github.com/xjh22222228/nav
 
 import qs from 'qs'
-import Clipboard from 'clipboard'
 import {
   IWebProps,
   INavThreeProp,
   INavProps,
-  ISearchProps,
+  ISearchItemProps,
   IWebTag,
 } from '../types'
 import { STORAGE_KEY_MAP } from 'src/constants'
 import { CODE_SYMBOL } from 'src/constants/symbol'
 import { isLogin } from './user'
-import { SearchType } from 'src/components/search/index'
-import { websiteList, searchEngineList, settings, tagMap } from 'src/store'
+import { SearchType } from 'src/components/search/types'
+import { navs, search, settings, tagMap } from 'src/store'
 import { $t } from 'src/locale'
+import event from 'src/utils/mitt'
 
 export function randomInt(max: number) {
   return Math.floor(Math.random() * max)
@@ -24,7 +24,7 @@ export function randomInt(max: number) {
 
 export function fuzzySearch(
   navList: INavProps[],
-  keyword: string
+  keyword: string,
 ): INavThreeProp[] {
   if (!keyword.trim()) {
     return []
@@ -50,11 +50,21 @@ export function fuzzySearch(
     outerLoop: for (let i = 0; i < arr.length; i++) {
       const item = arr[i]
 
-      if (sType === SearchType.Class && item.title) {
-        if (item.nav[0]?.name && item.title.toLowerCase().includes(keyword)) {
-          resultList.push(item)
-          break
+      if (sType === SearchType.Class) {
+        if (item.title) {
+          if (
+            (item.title.toLowerCase().includes(keyword) ||
+              item.id == keyword) &&
+            item.nav?.[0]?.name
+          ) {
+            resultList.push(item)
+          }
         }
+
+        if (Array.isArray(item.nav)) {
+          f(item.nav)
+        }
+        continue
       }
 
       if (Array.isArray(item.nav)) {
@@ -98,7 +108,7 @@ export function fuzzySearch(
           }
 
           const find = item.tags.some((item: IWebTag) =>
-            item.url?.includes(keyword)
+            item.url?.includes(keyword),
           )
           if (find) {
             if (!urlRecordMap.has(item.id)) {
@@ -143,7 +153,7 @@ export function fuzzySearch(
 
         const searchTags = () => {
           return item.tags.forEach((tag: IWebTag) => {
-            if (tagMap[tag.id]?.name?.toLowerCase() === keyword) {
+            if (tagMap()[tag.id]?.name?.toLowerCase() === keyword) {
               if (!urlRecordMap.has(item.id)) {
                 urlRecordMap.set(item.id, true)
                 navData.push(item)
@@ -220,8 +230,6 @@ export function randomColor(): string {
 
 let randomTimer: any
 export function randomBgImg(): void {
-  if (isDark()) return
-
   if (randomTimer) {
     clearInterval(randomTimer)
   }
@@ -229,8 +237,8 @@ export function randomBgImg(): void {
   const id = 'random-light-bg'
   const el = document.getElementById(id) || document.createElement('div')
   const deg = randomInt(360)
-
   el.id = id
+  el.className = 'dark-bg'
   el.style.cssText = `
     position: fixed;
     top: 0;
@@ -240,21 +248,11 @@ export function randomBgImg(): void {
     z-index: -3;
     transition: 1s linear;
   `
-
   el.style.backgroundImage = `linear-gradient(${deg}deg, ${randomColor()} 0%, ${randomColor()} 100%)`
   document.body.appendChild(el)
 
-  const setBg = (): void => {
-    if (isDark()) {
-      if (randomTimer) {
-        clearInterval(randomTimer)
-        randomTimer = null
-      }
-      return
-    }
-
+  const transition = (): void => {
     const randomBg = `linear-gradient(${deg}deg, ${randomColor()} 0%, ${randomColor()} 100%)`
-
     el.style.opacity = '0.3'
     setTimeout(() => {
       el.style.backgroundImage = randomBg
@@ -262,18 +260,29 @@ export function randomBgImg(): void {
     }, 1000)
   }
 
-  randomTimer = setInterval(setBg, 10000)
+  randomTimer = setInterval(transition, 10000)
 }
 
-export function queryString() {
-  const { href } = window.location
+export function removeBgImg(): void {
+  if (randomTimer) {
+    clearInterval(randomTimer)
+    randomTimer = null
+  }
+  const el = document.getElementById('random-light-bg')
+  if (el) {
+    el.parentNode?.removeChild(el)
+  }
+}
+
+export function queryString(cached: boolean = true) {
+  const { href } = location
   const search = href.split('?')[1] || ''
   const parseQs = qs.parse(search)
   let id = parseQs['id']
 
-  if (parseQs['id'] == null) {
+  if (cached && parseQs['id'] == null) {
     try {
-      const location = window.localStorage.getItem(STORAGE_KEY_MAP.location)
+      const location = localStorage.getItem(STORAGE_KEY_MAP.LOCATION)
       if (location) {
         const localLocation = JSON.parse(location)
         id = localLocation.id
@@ -293,20 +302,20 @@ export function setLocation() {
   const { id } = queryString()
 
   window.localStorage.setItem(
-    STORAGE_KEY_MAP.location,
+    STORAGE_KEY_MAP.LOCATION,
     JSON.stringify({
       id,
-    })
+    }),
   )
 }
 
-export function getDefaultSearchEngine(): ISearchProps {
-  let DEFAULT = (searchEngineList[0] || {}) as ISearchProps
+export function getDefaultSearchEngine(): ISearchItemProps {
+  let DEFAULT = (search().list[0] || {}) as ISearchItemProps
   try {
-    const engine = window.localStorage.getItem(STORAGE_KEY_MAP.engine)
+    const engine = window.localStorage.getItem(STORAGE_KEY_MAP.SEARCH_ENGINE)
     if (engine) {
       const local = JSON.parse(engine)
-      const findItem = searchEngineList.find((item) => item.name === local.name)
+      const findItem = search().list.find((item) => item.name === local.name)
       if (findItem) {
         DEFAULT = findItem
       }
@@ -315,12 +324,15 @@ export function getDefaultSearchEngine(): ISearchProps {
   return DEFAULT
 }
 
-export function setDefaultSearchEngine(engine: ISearchProps) {
-  window.localStorage.setItem(STORAGE_KEY_MAP.engine, JSON.stringify(engine))
+export function setDefaultSearchEngine(engine: ISearchItemProps) {
+  window.localStorage.setItem(
+    STORAGE_KEY_MAP.SEARCH_ENGINE,
+    JSON.stringify(engine),
+  )
 }
 
 export function isDark(): boolean {
-  const storageVal = window.localStorage.getItem(STORAGE_KEY_MAP.isDark)
+  const storageVal = window.localStorage.getItem(STORAGE_KEY_MAP.IS_DARK)
   const darkMode = window?.matchMedia?.('(prefers-color-scheme: dark)')?.matches
 
   if (!storageVal && darkMode) {
@@ -330,34 +342,33 @@ export function isDark(): boolean {
   return Boolean(Number(storageVal))
 }
 
-export function copyText(el: Event, text: string): Promise<boolean> {
-  const target = el.target as Element
-  const ranId = `copy-${Date.now()}`
-  target.id = ranId
-  target.setAttribute('data-clipboard-text', text)
-
-  return new Promise((resolve) => {
-    const clipboard = new Clipboard(`#${ranId}`)
-    clipboard.on('success', function () {
-      clipboard.destroy()
-      resolve(true)
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch (error: any) {
+    event.emit('MESSAGE', {
+      type: 'error',
+      message: error.message,
     })
-
-    clipboard.on('error', function () {
-      clipboard.destroy()
-      resolve(false)
-    })
-  })
+    return false
+  }
 }
 
-export async function isValidImg(url: string): Promise<boolean> {
-  if (!url) return false
+export async function isValidImg(
+  url: string,
+): Promise<{ valid: boolean; url: string }> {
+  const payload = {
+    valid: false,
+    url,
+  }
+  if (!url) return payload
 
-  if (url === 'null' || url === 'undefined') return false
+  if (url === 'null' || url === 'undefined') return payload
 
   const { protocol } = window.location
 
-  if (protocol === 'https:' && url.startsWith('http:')) return false
+  if (protocol === 'https:' && url.startsWith('http:')) return payload
 
   return new Promise((resolve) => {
     const img = document.createElement('img')
@@ -365,11 +376,12 @@ export async function isValidImg(url: string): Promise<boolean> {
     img.style.display = 'none'
     img.onload = () => {
       img.parentNode?.removeChild(img)
-      resolve(true)
+      payload.valid = true
+      resolve(payload)
     }
     img.onerror = () => {
       img.parentNode?.removeChild(img)
-      resolve(false)
+      resolve(payload)
     }
     document.body.append(img)
   })
@@ -385,14 +397,15 @@ export function matchCurrentList(): INavThreeProp[] {
   const { id } = queryString()
   const { oneIndex, twoIndex } = getClassById(id)
   let data: INavThreeProp[] = []
+  const navsData = navs()
 
   try {
     if (
-      websiteList[oneIndex] &&
-      websiteList[oneIndex]?.nav?.length > 0 &&
-      (isLogin || !websiteList[oneIndex].nav[twoIndex].ownVisible)
+      navsData[oneIndex] &&
+      navsData[oneIndex]?.nav?.length > 0 &&
+      (isLogin || !navsData[oneIndex].nav[twoIndex].ownVisible)
     ) {
-      data = websiteList[oneIndex].nav[twoIndex].nav
+      data = navsData[oneIndex].nav[twoIndex].nav
     } else {
       data = []
     }
@@ -429,7 +442,9 @@ export function getOverIndex(selector: string): number {
 }
 
 export function isMobile() {
-  return 'ontouchstart' in window
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  )
 }
 
 // 今年第几天
@@ -466,68 +481,82 @@ export function getDateTime() {
 }
 
 export function getDefaultTheme() {
-  const t = isMobile() ? settings.appTheme : settings.theme
+  const { theme, appTheme } = settings()
+  const t = isMobile() ? appTheme : theme
   if (t === 'Current') {
-    return settings.theme
+    return theme
   }
   return t
 }
 
-export function getClassById(id: unknown, initValue = 0) {
+export function getClassById(id: unknown, initValue = 0, isWebId = false) {
   id = Number(id)
   let oneIndex = initValue
   let twoIndex = initValue
   let threeIndex = initValue
+  let parentId = -1
   const breadcrumb: string[] = []
+  const navsData = navs()
 
-  outerLoop: for (let i = 0; i < websiteList.length; i++) {
-    const item = websiteList[i]
-    if (item.title) {
-      if (item.id === id) {
-        oneIndex = i
-        breadcrumb.push(item.title)
-        break
-      }
+  outerLoop: for (let i = 0; i < navsData.length; i++) {
+    const item = navsData[i]
+    if (item.id === id) {
+      oneIndex = i
+      breadcrumb.push(item.title)
+      break
     }
     if (Array.isArray(item.nav)) {
       for (let j = 0; j < item.nav.length; j++) {
         const twoItem = item.nav[j]
-        if (twoItem.title) {
-          if (twoItem.id === id) {
-            oneIndex = i
-            twoIndex = j
-            breadcrumb.push(item.title, twoItem.title)
-            break outerLoop
-          }
+        if (twoItem.id === id) {
+          parentId = item.id
+          oneIndex = i
+          twoIndex = j
+          breadcrumb.push(item.title, twoItem.title)
+          break outerLoop
         }
         if (Array.isArray(twoItem.nav)) {
           for (let k = 0; k < twoItem.nav.length; k++) {
             const threeItem = twoItem.nav[k]
             if (threeItem.id === id) {
+              parentId = twoItem.id
               oneIndex = i
               twoIndex = j
               threeIndex = k
               breadcrumb.push(item.title, twoItem.title, threeItem.title)
               break outerLoop
             }
+            if (isWebId) {
+              if (Array.isArray(threeItem.nav)) {
+                for (let l = 0; l < threeItem.nav.length; l++) {
+                  const web = threeItem.nav[l]
+                  if (web.id === id) {
+                    parentId = threeItem.id
+                    oneIndex = i
+                    twoIndex = j
+                    threeIndex = k
+                    breadcrumb.push(item.title, twoItem.title, threeItem.title)
+                    break outerLoop
+                  }
+                }
+              }
+            }
           }
         }
       }
     }
   }
-  return {
-    oneIndex,
-    twoIndex,
-    threeIndex,
-    breadcrumb,
-  } as const
+  return { parentId, oneIndex, twoIndex, threeIndex, breadcrumb } as const
 }
 
-export function scrollIntoView(
+export function scrollIntoViewLeft(
   parentElement: HTMLElement,
   target: HTMLElement,
-  config?: ScrollToOptions
+  config?: ScrollToOptions,
 ) {
+  if (!parentElement || !target) {
+    return
+  }
   const containerWidth = parentElement.offsetWidth
   const categoryWidth = target.offsetWidth
   const categoryLeft = target.offsetLeft
@@ -537,4 +566,9 @@ export function scrollIntoView(
     behavior: 'smooth',
     ...config,
   })
+}
+
+export function imageErrorHidden(el: Event) {
+  // @ts-ignore
+  el.target.style.display = 'none'
 }

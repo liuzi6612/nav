@@ -12,11 +12,11 @@ import type { ITagPropValues } from 'src/types'
 import { updateFileContent } from 'src/api'
 import { TAG_PATH } from 'src/constants'
 import { tagList } from 'src/store'
-import { isSelfDevelop } from 'src/utils/utils'
 import { NzButtonModule } from 'ng-zorro-antd/button'
 import { NzInputModule } from 'ng-zorro-antd/input'
 import { NzTableModule } from 'ng-zorro-antd/table'
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm'
+import { NzSwitchModule } from 'ng-zorro-antd/switch'
 
 @Component({
   standalone: true,
@@ -27,6 +27,7 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm'
     NzInputModule,
     NzTableModule,
     NzPopconfirmModule,
+    NzSwitchModule,
   ],
   providers: [NzModalService, NzMessageService],
   selector: 'system-tag',
@@ -35,14 +36,13 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm'
 })
 export default class SystemTagComponent {
   readonly $t = $t
-  readonly isSelfDevelop = isSelfDevelop
-  tagList: ITagPropValues[] = tagList
+  tagList: ITagPropValues[] = tagList()
   submitting: boolean = false
-  incrementId = Math.max(...tagList.map((item) => Number(item.id))) + 1
+  incrementId = Math.max(...tagList().map((item) => Number(item.id))) + 1
 
   constructor(
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
   ) {}
 
   ngOnInit() {}
@@ -113,7 +113,24 @@ export default class SystemTagComponent {
       this.message.error($t('_repeatAdd'))
       return
     }
-
+    const tagList = [...this.tagList].map((item) => {
+      item.sort ||= ''
+      if (typeof item.sort === 'string') {
+        item.sort = item.sort.trim()
+      }
+      if (item.sort === '') {
+        delete item.sort
+      }
+      if (Number.isNaN(Number(item.sort))) {
+        delete item.sort
+      }
+      if (item.sort != null) {
+        item.sort = Number(item.sort)
+      }
+      return {
+        ...item,
+      }
+    })
     this.modal.info({
       nzTitle: $t('_syncDataOut'),
       nzOkText: $t('_confirmSync'),
@@ -122,11 +139,11 @@ export default class SystemTagComponent {
         this.submitting = true
         updateFileContent({
           message: 'update tag',
-          content: JSON.stringify(this.tagList),
+          content: JSON.stringify(tagList),
           path: TAG_PATH,
         })
           .then(() => {
-            this.message.success($t('_saveSuccess'))
+            this.message.success($t('_syncSuccessTip'))
           })
           .finally(() => {
             this.submitting = false

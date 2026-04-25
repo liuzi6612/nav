@@ -8,11 +8,13 @@ import {
   getDefaultSearchEngine,
   setDefaultSearchEngine,
   queryString,
+  isDark,
+  isMobile,
 } from 'src/utils'
-import { Router } from '@angular/router'
-import { searchEngineList } from 'src/store'
-import type { ISearchProps } from 'src/types'
-import { SearchType } from './index'
+import { Router, ActivatedRoute } from '@angular/router'
+import { search } from 'src/store'
+import type { ISearchItemProps } from 'src/types'
+import { SearchType } from './types'
 import { $t } from 'src/locale'
 import { NzInputModule } from 'ng-zorro-antd/input'
 import { NzPopoverModule } from 'ng-zorro-antd/popover'
@@ -37,22 +39,42 @@ import event from 'src/utils/mitt'
 })
 export class SearchComponent {
   @ViewChild('input', { static: false }) input!: ElementRef
-  @Input() size: 'small' | 'default' | 'large' = 'default'
+  @Input() size: 'small' | 'default' | 'large' = 'large'
+  @Input() showLogo = true
 
   readonly $t = $t
   readonly isLogin = isLogin
   readonly SearchType = SearchType
-  readonly searchEngineList: ISearchProps[] = searchEngineList.filter(
-    (item) => !item.blocked
+  readonly searchEngineList: ISearchItemProps[] = search().list.filter(
+    (item) => !item.blocked,
   )
-  currentEngine: ISearchProps = getDefaultSearchEngine()
+  readonly search = search()
+  readonly isMobile = isMobile()
+  isDark = isDark()
+  currentEngine: ISearchItemProps = getDefaultSearchEngine()
   searchTypeValue = Number(queryString()['type']) || SearchType.All
   keyword = queryString().q
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private activatedRoute: ActivatedRoute,
+  ) {
     event.on('SEARCH_FOCUS', () => {
-      this.inputFocus()
+      if (!this.isMobile) {
+        this.inputFocus()
+      }
     })
+    if (!this.isLogin && this.searchTypeValue === SearchType.Id) {
+      this.searchTypeValue = SearchType.All
+    }
+    event.on('EVENT_DARK', (isDark: unknown) => {
+      this.isDark = isDark as boolean
+    })
+  }
+
+  get logoImage() {
+    const { darkLogo, logo } = search()
+    return this.isDark ? darkLogo || logo : logo || darkLogo
   }
 
   private inputFocus() {
@@ -62,7 +84,9 @@ export class SearchComponent {
   }
 
   ngAfterViewInit() {
-    this.inputFocus()
+    if (!this.isMobile) {
+      this.inputFocus()
+    }
   }
 
   onSelectChange() {
@@ -87,8 +111,9 @@ export class SearchComponent {
       return
     }
 
-    const params = queryString()
-    this.router.navigate([this.router.url.split('?')[0]], {
+    const { id, ...params } = queryString()
+    this.router.navigate([], {
+      relativeTo: this.activatedRoute,
       queryParams: {
         ...params,
         q: this.keyword,
@@ -96,6 +121,10 @@ export class SearchComponent {
         _: Date.now(),
       },
     })
+
+    if (this.isMobile) {
+      this.input?.nativeElement?.blur()
+    }
   }
 
   onKey(event: KeyboardEvent) {

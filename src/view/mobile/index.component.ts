@@ -8,10 +8,19 @@ import { CommonService } from 'src/services/common'
 import { SearchComponent } from 'src/components/search/index.component'
 import { CardComponent } from 'src/components/card/index.component'
 import { FooterComponent } from 'src/components/footer/footer.component'
+import { ToolbarTitleWebComponent } from 'src/components/toolbar-title/index.component'
+import { FixbarComponent } from 'src/components/fixbar/index.component'
 
 @Component({
   standalone: true,
-  imports: [CommonModule, SearchComponent, CardComponent, FooterComponent],
+  imports: [
+    CommonModule,
+    SearchComponent,
+    CardComponent,
+    FooterComponent,
+    ToolbarTitleWebComponent,
+    FixbarComponent,
+  ],
   selector: 'app-mobile',
   templateUrl: './index.component.html',
   styleUrls: ['./index.component.scss'],

@@ -179,9 +179,37 @@ textarea.ant-input {
   }
 }
 .hidden-scrollbar {
+  scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+.auto-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  &:hover {
+    &::-webkit-scrollbar {
+      display: block;
+    }
+  }
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(124, 124, 124);
+}
+::-webkit-scrollbar-thumb {
+  background-color: #82828280;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-corner {
+  background: #000;
+  border-radius: 0 0 8px 0;
+}
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
 // loading start
@@ -222,15 +250,16 @@ textarea.ant-input {
   width: 30px;
   height: 30px;
   animation: my-rotatex1 2s linear infinite;
+  .path {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: 0;
+    stroke-width: 5;
+    stroke: #409eff;
+    stroke-linecap: round;
+    animation: loading-dashx2 1.5s ease-in-out infinite;
+  }
 }
-.path {
-  stroke-dasharray: 90, 150;
-  stroke-dashoffset: 0;
-  stroke-width: 5;
-  stroke: #409eff;
-  stroke-linecap: round;
-  animation: loading-dashx2 1.5s ease-in-out infinite;
-}
+
 // loading end
 
 // Google ad
@@ -238,4 +267,10 @@ app-card:has(ins.adsbygoogle[data-ad-status='unfilled']),
 app-html:has(ins.adsbygoogle[data-ad-status='unfilled']),
 .aditem:has(ins.adsbygoogle[data-ad-status='unfilled']) {
   display: none;
+}
+.adsbygoogle,
+ins[data-ad-client] {
+  display: block;
+  z-index: 1;
+  position: relative;
 }

@@ -21,7 +21,6 @@
               "axios",
               "qs",
               "nprogress",
-              "clipboard",
               "file-saver",
               "localforage",
               "dayjs",
@@ -57,7 +56,8 @@
                   "maximumError": "10kb"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,
@@ -101,5 +101,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "023667ec-ba02-4d59-956a-8f75ed91ab7a"
   }
 }

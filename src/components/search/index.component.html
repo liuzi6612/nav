@@ -1,10 +1,16 @@
 <div
   class="search-engine"
   *ngIf="searchEngineList && searchEngineList.length > 0"
-  [class.small]="size === 'small'"
 >
+  <img
+    *ngIf="showLogo && logoImage"
+    class="pointer-events-none mb-4 select-none"
+    [src]="logoImage"
+    [ngStyle]="{ maxHeight: search.height + 'px' }"
+  />
+
   <div
-    class="input-wrapper dark-bg dark-border-color"
+    class="input-wrapper dark-bg dark-border-color max-[768px]:!w-[90%]"
     [class.removeAddon]="currentEngine.url"
   >
     <nz-input-group
@@ -28,7 +34,7 @@
     <ng-template #prefixIcon>
       <div
         class="left-icon"
-        nzPopoverTrigger="click"
+        [nzPopoverTrigger]="searchEngineList.length > 1 ? 'click' : null"
         [ngStyle]="{ 'background-image': 'url(' + currentEngine.icon + ')' }"
         nz-popover
         nzPopoverPlacement="bottomLeft"
@@ -38,11 +44,16 @@
       <ng-template #contentTemplate>
         <div class="engine-main">
           <div
-            class="item ellipsis dark-bg-gary dark-item-hover"
+            class="item ellipsis dark-bg-gary dark-item-hover max-[768px]:!w-full"
             *ngFor="let item of searchEngineList; let i = index"
             (click)="clickEngineItem(i)"
           >
-            <app-logo [src]="item.icon" [size]="20" [check]="false" />
+            <app-logo
+              *ngIf="item.icon"
+              [src]="item.icon"
+              [name]="item.name"
+              [size]="20"
+            />
             <span class="name2 dark-text ellipsis">{{ item.name }}</span>
           </div>
         </div>
@@ -66,6 +77,14 @@
           [nzValue]="SearchType.All"
         ></nz-option>
         <nz-option
+          [nzLabel]="$t('_class')"
+          [nzValue]="SearchType.Class"
+        ></nz-option>
+        <nz-option
+          [nzLabel]="$t('_tag')"
+          [nzValue]="SearchType.Tag"
+        ></nz-option>
+        <nz-option
           [nzLabel]="$t('_title')"
           [nzValue]="SearchType.Title"
         ></nz-option>
@@ -84,14 +103,6 @@
         <nz-option
           [nzLabel]="$t('_quick')"
           [nzValue]="SearchType.Quick"
-        ></nz-option>
-        <nz-option
-          [nzLabel]="$t('_tag')"
-          [nzValue]="SearchType.Tag"
-        ></nz-option>
-        <nz-option
-          [nzLabel]="$t('_class')"
-          [nzValue]="SearchType.Class"
         ></nz-option>
         <nz-option
           *ngIf="isLogin"

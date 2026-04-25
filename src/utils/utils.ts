@@ -16,20 +16,21 @@ interface TemplateData {
 }
 
 export function compilerTemplate(str: string): string {
+  const { loginViewCount, userViewCount } = internal()
   const data: TemplateData = {
-    total: isLogin ? internal.loginViewCount : internal.userViewCount,
+    total: isLogin ? loginViewCount : userViewCount,
     hostname: window.location.hostname,
     year: new Date().getFullYear(),
   }
 
   return Object.entries(data).reduce(
     (result, [key, value]) => result.replaceAll(`\${${key}}`, String(value)),
-    str
+    str,
   )
 }
 
 const DARK_THEME = {
-  cssUrl: '//unpkg.com/ng-zorro-antd@19.1.0/ng-zorro-antd.dark.min.css',
+  cssUrl: navConfig.zorroDark,
   cssId: 'dark-css',
   classes: ['dark-container', 'dark'],
 } as const
@@ -53,6 +54,9 @@ export function removeDark(): void {
 }
 
 export function parseHtmlWithContent(node: HTMLElement, str: string) {
+  if (!str || !node) {
+    return
+  }
   if (str[0] === CODE_SYMBOL) {
     if (!node) return
     const s = node.querySelectorAll('script')
@@ -80,6 +84,9 @@ export function parseHtmlWithContent(node: HTMLElement, str: string) {
 }
 
 export function parseLoadingWithContent(str: string): string {
+  if (!str) {
+    return ''
+  }
   if (str[0] !== '!') {
     return str
   }

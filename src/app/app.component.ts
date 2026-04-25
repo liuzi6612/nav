@@ -25,7 +25,7 @@ import { NzMessageService } from 'ng-zorro-antd/message'
 import { NzNotificationService } from 'ng-zorro-antd/notification'
 import { NzSpinModule } from 'ng-zorro-antd/spin'
 import { NzModalService } from 'ng-zorro-antd/modal'
-import { getWebs } from 'src/utils/web'
+import { getNavs } from 'src/utils/web'
 import { isSelfDevelop } from 'src/utils/utils'
 import { routes } from './app.routes'
 import { MoveWebComponent } from 'src/components/move-web/index.component'
@@ -33,7 +33,11 @@ import { CreateWebComponent } from 'src/components/create-web/index.component'
 import { IconGitComponent } from 'src/components/icon-git/icon-git.component'
 import { EditClassComponent } from 'src/components/edit-class/index.component'
 import { $t } from 'src/locale'
+import { getAuthCode } from 'src/utils/user'
+import { DeleteModalComponent } from 'src/components/delete-modal/index.component'
 import event from 'src/utils/mitt'
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker'
+import { filter } from 'rxjs/operators'
 
 @Component({
   standalone: true,
@@ -45,13 +49,14 @@ import event from 'src/utils/mitt'
     CommonModule,
     MoveWebComponent,
     CreateWebComponent,
+    DeleteModalComponent,
   ],
   selector: 'app-xiejiahe',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent {
-  isLogin: boolean = isLogin
+  readonly isLogin: boolean = isLogin
   fetchIng = true
 
   constructor(
@@ -60,15 +65,45 @@ export class AppComponent {
     private i18n: NzI18nService,
     private message: NzMessageService,
     private notification: NzNotificationService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private swUpdate: SwUpdate,
   ) {
     this.registerEvents()
-
+    this.registerKeyboard()
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.updateDocumentTitle()
       }
     })
+    this.setupSwUpdate()
+  }
+
+  private setupSwUpdate() {
+    if (this.swUpdate.isEnabled) {
+      this.swUpdate.versionUpdates
+        .pipe(
+          filter(
+            (evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY',
+          ),
+        )
+        .subscribe((evt) => {
+          this.swUpdate.activateUpdate()
+          this.modal.confirm({
+            nzTitle: `${$t('_avaUpdate')} ${evt.latestVersion.hash.slice(0, 10)}`,
+            nzContent: $t('_canNewVer'),
+            nzOkText: $t('_nowUpdate'),
+            nzCancelText: $t('_later'),
+            nzOnOk: async () => {
+              try {
+                await this.swUpdate.activateUpdate()
+                window.location.reload()
+              } catch (error) {
+                this.message.error(`${$t('_updateFailed')} ${error}`)
+              }
+            },
+          })
+        })
+    }
   }
 
   private registerEvents() {
@@ -82,7 +117,7 @@ export class AppComponent {
         props.type,
         props.title,
         props.content,
-        props.config
+        props.config,
       )
     })
 
@@ -93,9 +128,9 @@ export class AppComponent {
 
   private updateDocumentTitle() {
     const url = this.router.url.split('?')[0].slice(1)
-    const theme = (url === '' ? settings.theme : url).toLowerCase()
-    const title = settings[`${theme}DocTitle`]
-    document.title = title || window.__TITLE__ || settings.title
+    const theme = (url === '' ? settings().theme : url).toLowerCase()
+    const title = settings()[`${theme}DocTitle`]
+    document.title = title || window.__TITLE__ || settings().title
   }
 
   ngOnInit() {
@@ -103,18 +138,19 @@ export class AppComponent {
     this.activatedRoute.queryParams.subscribe(setLocation)
     this.setLocale()
     this.verifyToken()
-    this.getWebs()
+    this.getNavs()
     this.getCollectCount()
   }
 
-  private getWebs() {
+  private getNavs() {
+    const { href } = location
     if (isSelfDevelop) {
       getContentes().then(() => {
         setTimeout(() => {
           const currentRoutes = this.router.config
           const defaultTheme = getDefaultTheme().toLowerCase()
           const hasDefault = routes.find(
-            (item: any) => item.path === defaultTheme
+            (item: any) => item.path === defaultTheme,
           )
           const isHome = this.router.url.split('?')[0] === '/'
           if (hasDefault) {
@@ -126,7 +162,7 @@ export class AppComponent {
               },
             ])
           }
-          if (isHome) {
+          if (isHome && !href.includes('/system')) {
             this.router.navigate([defaultTheme])
           }
           this.updateDocumentTitle()
@@ -136,7 +172,7 @@ export class AppComponent {
         }, 100)
       })
     } else {
-      getWebs().finally(() => {
+      getNavs().finally(() => {
         this.fetchIng = false
       })
     }
@@ -157,15 +193,19 @@ export class AppComponent {
         .then((res) => {
           const data = res.data || {}
           if (!isSelfDevelop) {
-            if (data.login && data.login !== authorName) {
+            if ((data.login || data.username) !== authorName) {
               throw new Error('Bad credentials')
             }
-            if (!settings.email && data.email) {
-              settings.email = data.email
+            if (!settings().email && data.email) {
+              settings.update((prev) => {
+                return {
+                  ...prev,
+                  email: data.email,
+                }
+              })
+              event.emit('GITHUB_USER_INFO', data)
             }
           }
-
-          event.emit('GITHUB_USER_INFO', data)
         })
         .catch((e: any) => {
           if (e.code !== 'ERR_NETWORK') {
@@ -179,7 +219,7 @@ export class AppComponent {
   }
 
   private getCollectCount() {
-    if (isLogin && getPermissions(settings).ok) {
+    if (isLogin && getAuthCode() && getPermissions(settings()).ok) {
       getUserCollectCount().then((res) => {
         const count = res.data.count
         if (count > 0) {
@@ -188,7 +228,7 @@ export class AppComponent {
             $t('_collectTip'),
             {
               nzDuration: 0,
-            }
+            },
           )
         }
       })
@@ -197,15 +237,45 @@ export class AppComponent {
 
   private goRoute() {
     // is App
-    if (settings.appTheme !== 'Current' && isMobile()) {
+    const { appTheme } = settings()
+    if (appTheme !== 'Current' && isMobile()) {
+      if (location.href.includes('system')) {
+        return
+      }
+
       const url = (this.router.url.split('?')[0] || '').toLowerCase()
       const { id, q } = queryString()
       const queryParams = { id, q }
-      const path = '/' + String(settings.appTheme).toLowerCase()
+      const path = '/' + String(appTheme).toLowerCase()
 
       if (!url.includes(path)) {
         this.router.navigate([path], { queryParams })
       }
     }
+  }
+
+  private registerKeyboard() {
+    document.addEventListener('keyup', (e) => {
+      const createWebKey = settings().createWebKey.toLowerCase()
+      if (!createWebKey) {
+        return
+      }
+      const activeElement = document.activeElement
+      if (activeElement) {
+        if (
+          activeElement.nodeName === 'INPUT' ||
+          activeElement.nodeName === 'TEXTAREA'
+        ) {
+          return
+        }
+      }
+
+      const key = e.key.toLowerCase()
+      if (key === createWebKey) {
+        event.emit('CREATE_WEB', {
+          isKeyboard: true,
+        })
+      }
+    })
   }
 }

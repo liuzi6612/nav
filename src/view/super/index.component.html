@@ -5,27 +5,24 @@
     class="position-center"
   />
 
-  <header class="sheader dark-bg">
+  <header class="sheader dark-bg-gary dark-shadow">
     <div class="headerbox">
-      <div class="hitem">
+      <div class="hitem py-2 md:py-0">
         <img
           class="logo"
-          [src]="commonService.settings.favicon"
+          [src]="commonService.settings().favicon"
           draggable="false"
         />
         <div class="title dark-white">
-          {{ commonService.settings.superTitle || commonService.title }}
+          {{ commonService.settings().superTitle || commonService.title() }}
         </div>
       </div>
 
-      <div class="topnav dark-scrollbar" #parent>
+      <div class="topnav hidden md:flex" #parent>
         <div
           #item
           *ngFor="
-            let item of commonService.websiteList.slice(
-              0,
-              commonService.overIndex
-            );
+            let item of commonService.navs().slice(0, commonService.overIndex);
             index as i;
             trackBy: commonService.trackByItem
           "
@@ -38,10 +35,8 @@
         </div>
         <!-- More -->
         <app-web-more-menu
-          *ngIf="commonService.overIndex < commonService.websiteList.length"
-          [data]="
-            commonService.websiteList.slice(commonService.overIndex, 99999)
-          "
+          *ngIf="commonService.overIndex < commonService.navs().length"
+          [data]="commonService.navs().slice(commonService.overIndex, 99999)"
           [index]="commonService.overIndex"
           [page]="commonService.oneIndex"
           (onClick)="commonService.handleClickClass($event)"
@@ -51,14 +46,17 @@
     </div>
   </header>
 
-  <div class="component-box" *ngIf="commonService.settings.components.length">
-    <component-group></component-group>
+  <div class="component-box" *ngIf="commonService.settings().components.length">
+    <component-group />
   </div>
 
   <div class="main-box">
     <div
-      class="left dark-bg dark-border-color dark-scrollbar"
-      *ngIf="commonService.websiteList[commonService.oneIndex]"
+      class="left dark-bg dark-border-color md:!block"
+      *ngIf="
+        commonService.navs()[commonService.oneIndex]?.nav?.length &&
+        commonService.navs()[commonService.oneIndex].nav.length > 1
+      "
     >
       <div
         class="bar-item dark-text dark-hover ellipsis"
@@ -66,7 +64,7 @@
         [class.dark-item-active]="commonService.twoIndex === i"
         (click)="commonService.handleClickClass(item.id)"
         *ngFor="
-          let item of commonService.websiteList[commonService.oneIndex].nav;
+          let item of commonService.navs()[commonService.oneIndex].nav;
           index as i;
           trackBy: commonService.trackByItem
         "
@@ -78,12 +76,12 @@
 
     <div
       class="middle dark-bg"
-      [class.noads]="commonService.settings.superImages.length <= 0"
+      [class.noads]="commonService.settings().superImages.length <= 0"
     >
       <div class="search-t dark-border-color">
         <app-search />
 
-        <div class="bar dark-scrollbar select-none" #parentThree>
+        <div class="bar select-none" #parentThree>
           <div
             #itemThree
             class="bar-item"
@@ -117,7 +115,7 @@
             ].nav.slice(0, commonService.sliceMax);
             trackBy: commonService.trackByItemWeb
           "
-          [cardStyle]="commonService.settings.superCardStyle"
+          [cardStyle]="commonService.settings().superCardStyle"
           [dataSource]="el"
         />
       </div>
@@ -139,10 +137,14 @@
       </div>
     </div>
 
-    <app-side-images [data]="commonService.settings.superImages" />
+    <app-side-images
+      [data]="commonService.settings().superImages"
+      class="md:w-[200px] lg:w-[230px] xl:w-[250px]"
+      *ngIf="commonService.settings().superImages.length > 0"
+    />
   </div>
 
-  <app-footer [content]="commonService.settings.superFooterHTML" />
-
+  <app-sidebar class="md:hidden" />
+  <app-footer [content]="commonService.settings().superFooterHTML" />
   <app-fixbar [showCollapse]="false" />
 </section>

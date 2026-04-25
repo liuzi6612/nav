@@ -1,9 +1,10 @@
 <div
+  [id]="'t' + dataSource.id"
   class="title tool-title dark-primary dark-border-color"
   *ngIf="dataSource && dataSource.title"
 >
   <div
-    class="cursor-pointer whitespace-nowrap ellipsis pr-4"
+    class="cursor-pointer whitespace-nowrap ellipsis pr-4 flex items-center"
     (click)="onCollapse.emit()"
   >
     <i
@@ -12,8 +13,14 @@
     >
     </i>
 
+    <i
+      class="iconfont iconyinru text-neutral-400"
+      *ngIf="isLogin && dataSource.rId"
+    ></i>
+
     <span class="ml-1 self-center align-middle">
-      {{ dataSource.title }} x {{ dataSource.nav.length }}
+      {{ dataSource.title
+      }}{{ dataSource.nav.length < 10 ? '' : ' x ' + dataSource.nav.length }}
     </span>
 
     <ng-content *ngIf="dataSource.id !== -1">

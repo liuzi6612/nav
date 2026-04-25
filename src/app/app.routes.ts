@@ -34,7 +34,6 @@ export const routes: Routes = [
     path: 'light',
     component: LightComponent,
     data: {
-      renderLinear: true,
       data: {},
     },
   },
@@ -88,6 +87,10 @@ export const routes: Routes = [
       {
         path: 'web',
         loadComponent: () => import('src/view/system/web/index.component'),
+      },
+      {
+        path: 'config',
+        loadComponent: () => import('src/view/system/config/index.component'),
       },
       {
         path: '**',

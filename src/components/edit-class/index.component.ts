@@ -22,11 +22,11 @@ import { NzFormModule } from 'ng-zorro-antd/form'
 import { NzInputModule } from 'ng-zorro-antd/input'
 import { NzSwitchModule } from 'ng-zorro-antd/switch'
 import { LogoComponent } from 'src/components/logo/logo.component'
-import { UploadComponent } from 'src/components/upload/index.component'
+import { UploadImageComponent } from 'src/components/upload-image/index.component'
 import { $t } from 'src/locale'
 import { NzMessageService } from 'ng-zorro-antd/message'
-import { websiteList } from 'src/store'
-import { setWebsiteList, updateByClass, pushDataByAny } from 'src/utils/web'
+import { navs } from 'src/store'
+import { setNavs, updateByClass, pushDataByAny } from 'src/utils/web'
 import { getClassById } from 'src/utils/index'
 import { getTempId, isSelfDevelop } from 'src/utils/utils'
 import event from 'src/utils/mitt'
@@ -40,7 +40,7 @@ import event from 'src/utils/mitt'
     NzInputModule,
     NzSwitchModule,
     LogoComponent,
-    UploadComponent,
+    UploadImageComponent,
     FormsModule,
     ReactiveFormsModule,
   ],
@@ -58,7 +58,10 @@ export class EditClassComponent {
   isEdit = false
   submitting = false
 
-  constructor(private fb: FormBuilder, private message: NzMessageService) {
+  constructor(
+    private fb: FormBuilder,
+    private message: NzMessageService,
+  ) {
     this.validateForm = this.fb.group({
       title: ['', [Validators.required]],
       icon: [''],
@@ -120,12 +123,16 @@ export class EditClassComponent {
         params['nav'] = []
 
         const { oneIndex, twoIndex } = getClassById(id, -1)
+        // 非一级
         if (oneIndex !== -1 || twoIndex !== -1) {
           const ok = pushDataByAny(id, params)
           ok && this.message.success($t('_addSuccess'))
         } else {
-          websiteList.push(params as any)
-          setWebsiteList(websiteList)
+          navs.update((prev) => {
+            prev.unshift(params as any)
+            setNavs(prev)
+            return prev
+          })
         }
       }
     } catch (error: any) {

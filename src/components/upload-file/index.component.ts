@@ -6,18 +6,17 @@ import { Component, EventEmitter, Output } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { $t } from 'src/locale'
 import { NzMessageService } from 'ng-zorro-antd/message'
-import { createFile, getCDN, getImageRepo } from 'src/api'
+import { createFile } from 'src/api'
 import { NzIconModule } from 'ng-zorro-antd/icon'
-import { isSelfDevelop } from 'src/utils/utils'
 
 @Component({
   standalone: true,
   imports: [CommonModule, NzIconModule],
-  selector: 'app-upload',
+  selector: 'app-upload-file',
   templateUrl: './index.component.html',
   styleUrls: ['./index.component.scss'],
 })
-export class UploadComponent {
+export class UploadFileComponent {
   @Output() onChange = new EventEmitter()
 
   readonly $t = $t
@@ -36,9 +35,6 @@ export class UploadComponent {
     if (files.length <= 0) return
     const file = files[0]
 
-    if (!file.type.startsWith('image')) {
-      return this.message.error($t('_notUpload'))
-    }
     this.onUpload(file).finally(() => {
       e.target.value = ''
     })
@@ -54,21 +50,18 @@ export class UploadComponent {
         that.uploading = true
         const iconUrl = this.result as string
         const url = iconUrl.split(',')[1]
-        // fileName 方便自动带上文件后缀
-        const fileName = file.name.replace(/\s/gi, '')
-        const path = `${Date.now()}_${fileName}`
+        const path = file.name
 
         createFile({
-          branch: getImageRepo().branch,
-          message: 'create image',
+          message: `create ${path}`,
           content: url,
-          isEncode: false,
           path,
         })
           .then((res) => {
             const params = {
-              cdn: isSelfDevelop ? res?.data?.fullImagePath : getCDN(path),
+              cdn: res?.data.filePath,
             }
+            window.open(params.cdn)
             that.onChange.emit(params)
             that.message.success($t('_uploadSuccess'))
             resolve(params)

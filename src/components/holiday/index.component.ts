@@ -4,9 +4,10 @@
 
 import { Component, Input } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import type { IComponentProps } from 'src/types'
+import type { IComponentItemProps } from 'src/types'
 import { $t } from 'src/locale'
 import dayjs from 'dayjs'
+import { component } from 'src/store'
 
 @Component({
   standalone: true,
@@ -16,8 +17,10 @@ import dayjs from 'dayjs'
   styleUrls: ['./index.component.scss'],
 })
 export class HolidayComponent {
-  @Input() data!: IComponentProps
+  @Input() data!: IComponentItemProps
   items: any[] = []
+
+  readonly component = component()
   readonly $t = $t
 
   constructor() {}
@@ -27,7 +30,7 @@ export class HolidayComponent {
   }
 
   private init() {
-    let items: any = {}
+    let items: any = []
     const now = dayjs(dayjs().format('YYYY-MM-DD'))
     if (this.data['items']) {
       items = [...this.data['items']]
@@ -47,7 +50,7 @@ export class HolidayComponent {
           item.dateStr = dayjs(item.date).format('MM.DD')
           item.diffDay = dayjs(dayjs(item.date).format('YYYY-MM-DD')).diff(
             now,
-            'day'
+            'day',
           )
           item.diffDay = item.diffDay < 0 ? 0 : item.diffDay
           item.diffDay = item.diffDay > 999 ? 999 : item.diffDay

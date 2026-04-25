@@ -3,7 +3,7 @@
 // See https://github.com/xjh22222228/nav
 
 import type { INavProps, IWebProps, INavTwoProp, INavThreeProp } from '../types'
-import { websiteList } from '../store'
+import { navs } from '../store'
 import { $t } from '../locale'
 import { getTempId } from './utils'
 import { removeTrailingSlashes } from './pureUtils'
@@ -44,13 +44,16 @@ interface BookmarkParseResult {
 }
 
 export function parseBookmark(
-  htmlStr: string
+  htmlStr: string,
 ): BookmarkParseResult | INavProps[] {
-  const copyWebList = JSON.parse(JSON.stringify(websiteList))
+  const copyWebList = JSON.parse(JSON.stringify(navs()))
   const data: INavProps[] = []
-  const importEl = document.createElement('div')
-  importEl.innerHTML = htmlStr
-  const roolDL = importEl.querySelector('dl dl')
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlStr, 'text/html')
+  const querySelector = htmlStr.includes('PERSONAL_TOOLBAR_FOLDER="true"')
+    ? 'body dl dl'
+    : 'body dl'
+  const roolDL = doc.querySelector(querySelector)
 
   if (!roolDL) {
     return {
@@ -120,7 +123,7 @@ export function parseBookmark(
             const twoLevel: INavTwoProp = {
               id: (id += 1),
               title,
-              icon: '',
+              icon: getIcon(titleEl),
               nav: [],
             }
             parentData.nav.push(twoLevel)
@@ -156,7 +159,7 @@ export function parseBookmark(
           const oneLevel: INavProps = {
             id: (id += 1),
             title,
-            icon: '',
+            icon: getIcon(titleEl),
             nav: [],
           }
           data.push(oneLevel)
@@ -220,7 +223,7 @@ export function parseBookmark(
       const title = (item.title || removeTrailingSlashes(item.url)).trim()
       const idx = list.findIndex(
         (item) =>
-          (item.title || removeTrailingSlashes(item.url)).trim() === title
+          (item.title || removeTrailingSlashes(item.url)).trim() === title,
       )
 
       if (idx !== -1) {
@@ -231,7 +234,7 @@ export function parseBookmark(
         const url = removeTrailingSlashes((item.url || '').trim())
         if (item.url) {
           const has = list.some(
-            (e) => removeTrailingSlashes(e.url).trim() === url
+            (e) => removeTrailingSlashes(e.url).trim() === url,
           )
           if (!has) {
             list.push(item)
@@ -248,6 +251,5 @@ export function parseBookmark(
     }
   }
   r(data, copyWebList)
-
   return copyWebList
 }

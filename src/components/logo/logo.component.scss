@@ -3,7 +3,6 @@
   display: inline-block;
   vertical-align: middle;
   pointer-events: none;
-  background-color: #eee;
   border-radius: 3px;
   object-fit: cover;
   transition: all 0.12s linear;
@@ -29,6 +28,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 50%;
   font-size: 18px;
+}
+
+.common-icon {
+  transition: all 0.1s linear;
 }

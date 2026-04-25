@@ -3,24 +3,23 @@
     padding-right: 12px !important;
     padding-left: 10px !important;
   }
-  .sider {
-    --menuTitleWidth: 85px;
-  }
 }
 
-.layout {
+.main {
   min-height: 100vh;
+  background-color: #f0f2f5;
+  display: flex;
   .inner-layout {
+    flex: 1;
+    width: 0;
+    display: flex;
+    flex-direction: column;
     .content {
+      flex: 1;
       margin-bottom: 2rem;
-      padding: 10px 70px 0 20px;
+      padding: 10px 70px 0 15px;
       display: flex;
       flex-direction: column;
-    }
-    .search-header {
-      z-index: 9;
-      position: relative;
-      text-align: center;
     }
   }
 
@@ -28,107 +27,15 @@
     flex: 1;
     transition: 0.1s linear;
   }
-
-  .collapse-wrapper {
-    position: absolute;
-    right: 0;
-    top: 0;
-    padding: 0 15px;
-
-    .collapseIcon {
-      display: block;
-      transform: rotate(-270deg);
-
-      &.active {
-        transform: rotate(-360deg);
-      }
-    }
-  }
-
-  .ant-menu-item {
-    padding-right: 40px;
-    padding-left: 38px !important;
-  }
   ::ng-deep {
-    .ant-menu-title-content {
-      display: flex;
-      align-items: center;
-    }
-    .ant-menu.ant-menu-inline-collapsed {
-      & > .ant-menu-submenu > .ant-menu-submenu-title {
-        padding: 0 !important;
-        text-align: center;
-        font-weight: 400;
+    .web-list {
+      padding: 0;
+      .name {
+        font-size: 13px;
       }
-      .sideicon {
-        margin-right: 0;
+      .common-icon {
+        border-radius: 2px !important;
       }
     }
-
-    .mobile-search {
-      .engine-main {
-        max-width: 95% !important;
-      }
-    }
-  }
-}
-
-.logo {
-  z-index: 11;
-  width: 100%;
-  padding: 10px;
-  padding-left: 15px;
-  background-color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  user-select: none;
-
-  .logo-img {
-    width: 50px;
-    height: 50px;
-    pointer-events: none;
-  }
-
-  .web-title {
-    font-weight: 500;
-    font-size: 18px;
-    margin-left: 10px;
-    vertical-align: middle;
-  }
-}
-
-.sider-compnent {
-  position: sticky;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  background-color: #fff;
-  ::ng-deep {
-    .ant-layout-sider-children {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-}
-
-.sider {
-  height: 100vh;
-  overflow: hidden;
-  overflow-y: auto;
-  flex: 1;
-  padding-bottom: 30px;
-  .menu-title {
-    max-width: var(--menuTitleWidth, 130px);
-  }
-}
-.sideicon {
-  width: 20px;
-  height: 20px;
-  margin-right: 12px;
-  object-fit: cover;
-  &.fixicon {
-    margin-right: 8px;
   }
 }

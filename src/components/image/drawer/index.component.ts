@@ -10,12 +10,12 @@ import { NzDrawerModule } from 'ng-zorro-antd/drawer'
 import { NzFormModule } from 'ng-zorro-antd/form'
 import { NzButtonModule } from 'ng-zorro-antd/button'
 import { NzInputModule } from 'ng-zorro-antd/input'
-import { UploadComponent } from 'src/components/upload/index.component'
+import { UploadImageComponent } from 'src/components/upload-image/index.component'
 
 @Component({
   standalone: true,
   imports: [
-    UploadComponent,
+    UploadImageComponent,
     FormsModule,
     ReactiveFormsModule,
     NzDrawerModule,
@@ -30,7 +30,7 @@ import { UploadComponent } from 'src/components/upload/index.component'
 export class ImageDrawerComponent {
   @Output() ok = new EventEmitter<void>()
 
-  $t = $t
+  readonly $t = $t
   visible = false
   validateForm!: FormGroup
   index = 0
@@ -46,7 +46,7 @@ export class ImageDrawerComponent {
   open(data: any, idx: number) {
     this.index = idx
     for (const k in data) {
-      this.validateForm.get(k)!?.setValue(data[k])
+      this.validateForm.get(k)?.setValue(data[k])
     }
     this.visible = true
   }

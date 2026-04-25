@@ -4,8 +4,9 @@
 
 import { Component, Input } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import type { IComponentProps } from 'src/types'
+import type { IComponentItemProps } from 'src/types'
 import { $t } from 'src/locale'
+import { component } from 'src/store'
 
 @Component({
   standalone: true,
@@ -15,16 +16,17 @@ import { $t } from 'src/locale'
   styleUrls: ['./index.component.scss'],
 })
 export class OffWorkComponent {
-  @Input() data!: IComponentProps
+  @Input() data!: IComponentItemProps
 
+  readonly component = component()
+  private timer: any
   countdownStr = ''
   isRest = false
-  private timer: any
 
   constructor() {
     document.addEventListener(
       'visibilitychange',
-      this.visibilitychange.bind(this)
+      this.visibilitychange.bind(this),
     )
   }
 
@@ -50,12 +52,12 @@ export class OffWorkComponent {
     if (this.data) {
       const now = new Date()
       const nowTime = now.getTime()
-      const startDate = new Date(this.data['startDate'])
+      const startDate = new Date(this.data['startDate'] as number)
       startDate.setFullYear(now.getFullYear())
       startDate.setMonth(now.getMonth())
       startDate.setDate(now.getDate())
       const startTime = startDate.getTime()
-      const date = new Date(this.data['date'])
+      const date = new Date(this.data['date'] as number)
       date.setFullYear(now.getFullYear())
       date.setMonth(now.getMonth())
       date.setDate(now.getDate())

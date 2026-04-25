@@ -5,27 +5,22 @@
 import { Component } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule, ReactiveFormsModule } from '@angular/forms'
-import type {
-  INavProps,
-  INavTwoProp,
-  INavThreeProp,
-  IWebProps,
-} from 'src/types'
-import {
-  websiteList,
-  settings,
-  searchEngineList,
-  tagList,
-  internal,
-  components,
-} from 'src/store'
+import type { INavTwoProp, INavThreeProp, IWebProps } from 'src/types'
+import { navs, settings, search, tagList, internal, component } from 'src/store'
 import { isLogin, removeWebsite } from 'src/utils/user'
 import { NzMessageService } from 'ng-zorro-antd/message'
 import { NzModalService } from 'ng-zorro-antd/modal'
 import { NzNotificationService } from 'ng-zorro-antd/notification'
-import { setWebsiteList } from 'src/utils/web'
+import { setNavs } from 'src/utils/web'
 import { updateFileContent } from 'src/api'
-import { DB_PATH, STORAGE_KEY_MAP } from 'src/constants'
+import {
+  DB_PATH,
+  TAG_PATH,
+  SETTING_PATH,
+  SEARCH_PATH,
+  COMPONENT_PATH,
+  STORAGE_KEY_MAP,
+} from 'src/constants'
 import { $t } from 'src/locale'
 import { saveAs } from 'file-saver'
 import { isSelfDevelop } from 'src/utils/utils'
@@ -40,18 +35,19 @@ import { NzIconModule } from 'ng-zorro-antd/icon'
 import { NzModalModule } from 'ng-zorro-antd/modal'
 import { NzFormModule } from 'ng-zorro-antd/form'
 import { NzSwitchModule } from 'ng-zorro-antd/switch'
-import { NzToolTipModule } from 'ng-zorro-antd/tooltip'
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip'
 import { LogoComponent } from 'src/components/logo/logo.component'
 import { TagListComponent } from 'src/components/tag-list/index.component'
 import { CommonService } from 'src/services/common'
 import event from 'src/utils/mitt'
 import config from '../../../../nav.config.json'
+import { cleanWebAttrs } from 'src/utils/pureUtils'
 
 @Component({
   standalone: true,
   imports: [
     CommonModule,
-    NzToolTipModule,
+    NzTooltipModule,
     FormsModule,
     ReactiveFormsModule,
     NzInputModule,
@@ -75,11 +71,11 @@ import config from '../../../../nav.config.json'
 export default class WebpComponent {
   readonly $t = $t
   readonly isSelfDevelop = isSelfDevelop
-  readonly internal = internal
-  readonly settings = settings
+  readonly internal = internal()
+  readonly settings = settings()
   readonly gitRepoUrl = config.gitRepoUrl
   readonly isLogin = isLogin
-  websiteList: INavProps[] = websiteList
+  navs = navs
   showCreateModal = false
   syncLoading = false
   uploading = false
@@ -95,13 +91,13 @@ export default class WebpComponent {
     private modal: NzModalService,
     private notification: NzNotificationService,
     private message: NzMessageService,
-    public commonService: CommonService
+    public commonService: CommonService,
   ) {}
 
   ngOnInit() {}
 
   get oneIndex() {
-    return this.websiteList.findIndex((item) => item.id === this.oneSelect)
+    return this.navs().findIndex((item) => item.id === this.oneSelect)
   }
 
   get twoIndex() {
@@ -115,7 +111,7 @@ export default class WebpComponent {
   get threeIndex() {
     try {
       return this.threeTableData.findIndex(
-        (item) => item.id === this.threeSelect
+        (item) => item.id === this.threeSelect,
       )
     } catch {
       return -1
@@ -124,9 +120,7 @@ export default class WebpComponent {
 
   get twoTableData(): INavTwoProp[] {
     try {
-      return (
-        this.websiteList.find((item) => item.id === this.oneSelect)?.nav || []
-      )
+      return this.navs().find((item) => item.id === this.oneSelect)?.nav || []
     } catch {
       return []
     }
@@ -145,7 +139,7 @@ export default class WebpComponent {
   get websiteTableData(): IWebProps[] {
     try {
       const data = this.threeTableData.find(
-        (item) => item.id === this.threeSelect
+        (item) => item.id === this.threeSelect,
       )
       if (data) {
         return data.nav
@@ -174,7 +168,7 @@ export default class WebpComponent {
         }
       }
     }
-    r(this.websiteList)
+    r(this.navs())
     this.errorWebs = errorWebs
     if (errorWebs.length <= 0) {
       this.message.success('No error!')
@@ -187,7 +181,7 @@ export default class WebpComponent {
     this.setOfCheckedId.clear()
     this.checkedAll = checked
     const data = [
-      this.websiteList,
+      this.navs(),
       this.twoTableData,
       this.threeTableData,
       this.websiteTableData,
@@ -214,28 +208,38 @@ export default class WebpComponent {
       case 0:
       case 1:
       case 2:
-        await this.commonService.deleteClassByIds([...this.setOfCheckedId])
+        event.emit('DELETE_MODAL', {
+          ids: [...this.setOfCheckedId],
+          isClass: true,
+          onComplete: () => {
+            this.onTabChange()
+          },
+        })
         break
 
       case 3:
-        const ok = await this.commonService.deleteWebByIds([
-          ...this.setOfCheckedId,
-        ])
-        if (ok && this.errorWebs.length) {
-          this.getErrorWebs()
-        }
+        event.emit('DELETE_MODAL', {
+          ids: [...this.setOfCheckedId],
+          ok: () => {
+            if (this.errorWebs.length) {
+              this.getErrorWebs()
+            }
+          },
+          onComplete: () => {
+            this.onTabChange()
+          },
+        })
         break
     }
-    this.onTabChange()
   }
 
-  handleReset() {
+  handleRestoreData() {
     this.modal.info({
       nzTitle: $t('_resetInitData'),
       nzContent: $t('_warnReset'),
       nzOnOk: () => {
         this.message.success($t('_actionSuccess'))
-        window.localStorage.removeItem(STORAGE_KEY_MAP.s_url)
+        window.localStorage.removeItem(STORAGE_KEY_MAP.DATE_TIME)
         removeWebsite().finally(() => {
           window.location.reload()
         })
@@ -245,20 +249,18 @@ export default class WebpComponent {
 
   handleDownloadBackup() {
     const params: any = {
-      db: this.websiteList,
-      settings,
-      tag: tagList,
-      search: searchEngineList,
-      component: components,
+      db: this.navs(),
+      settings: settings(),
+      tag: tagList(),
+      search: search(),
+      component: component(),
     }
-    for (const k in params) {
-      saveAs(
-        new Blob([JSON.stringify(params[k])], {
-          type: 'text/plain;charset=utf-8',
-        }),
-        `${k}.json`
-      )
-    }
+    saveAs(
+      new Blob([JSON.stringify(params)], {
+        type: 'text/plain;charset=utf-8',
+      }),
+      'nav.json',
+    )
   }
 
   handleUploadBackup(e: any) {
@@ -270,16 +272,97 @@ export default class WebpComponent {
     const file = files[0]
     const fileReader = new FileReader()
     fileReader.readAsText(file)
-    fileReader.onload = function (data) {
+    fileReader.onload = async function (file) {
       try {
-        const { result } = data.target as any
-        that.websiteList = JSON.parse(result)
-        that.message.success($t('_actionSuccess'))
-        setWebsiteList(that.websiteList).finally(() => {
-          location.reload()
-        })
+        const { result } = file.target as any
+        const data = JSON.parse(result)
+
+        try {
+          await updateFileContent({
+            message: 'import db',
+            content: JSON.stringify(data.db),
+            path: DB_PATH,
+            refresh: false,
+          })
+          that.notification.success('OK', 'DB import successful')
+        } catch {
+          that.notification.error('Error', 'DB import failed', {
+            nzDuration: 0,
+          })
+        }
+        try {
+          await updateFileContent({
+            message: 'import settings',
+            content: JSON.stringify({
+              ...settings,
+              ...data.settings,
+            }),
+            path: SETTING_PATH,
+            refresh: false,
+          })
+          that.notification.success('OK', 'settings import successful')
+        } catch {
+          that.notification.error('Error', 'settings import failed', {
+            nzDuration: 0,
+          })
+        }
+        try {
+          await updateFileContent({
+            message: 'import tag',
+            content: JSON.stringify(data.tag),
+            path: TAG_PATH,
+            refresh: false,
+          })
+          that.notification.success('OK', 'tag import successful')
+        } catch {
+          that.notification.error('Error', 'tag import failed', {
+            nzDuration: 0,
+          })
+        }
+        try {
+          await updateFileContent({
+            message: 'import search',
+            content: JSON.stringify({
+              ...search(),
+              ...data.search,
+            }),
+            path: SEARCH_PATH,
+            refresh: false,
+          })
+          that.notification.success('OK', 'search import successful')
+        } catch {
+          that.notification.error('Error', 'search import failed', {
+            nzDuration: 0,
+          })
+        }
+        try {
+          await updateFileContent({
+            message: 'import component',
+            content: JSON.stringify({
+              ...component,
+              ...data.component,
+            }),
+            path: COMPONENT_PATH,
+            refresh: false,
+          })
+          that.notification.success('OK', 'component import successful')
+        } catch {
+          that.notification.error('Error', 'component import failed', {
+            nzDuration: 0,
+          })
+        }
+
+        if (isSelfDevelop) {
+          setTimeout(() => {
+            location.reload()
+          }, 2000)
+        } else {
+          that.message.success($t('_syncSuccessTip'))
+        }
       } catch (error: any) {
         that.notification.error($t('_error'), error.message)
+      } finally {
+        e.target.value = ''
       }
     }
   }
@@ -323,23 +406,29 @@ export default class WebpComponent {
     if (index === 0) {
       return
     }
-    const current = this.websiteList[index]
-    const prev = this.websiteList[index - 1]
-    this.websiteList[index - 1] = current
-    this.websiteList[index] = prev
-    setWebsiteList(this.websiteList)
+    const current = this.navs()[index]
+    const prevData = this.navs()[index - 1]
+    this.navs.update((prev) => {
+      prev[index - 1] = current
+      prev[index] = prevData
+      setNavs(prev)
+      return prev
+    })
   }
 
   // 下移一级
   moveOneDown(index: number): void {
-    if (index === this.websiteList.length - 1) {
+    if (index === this.navs.length - 1) {
       return
     }
-    const current = this.websiteList[index]
-    const next = this.websiteList[index + 1]
-    this.websiteList[index + 1] = current
-    this.websiteList[index] = next
-    setWebsiteList(this.websiteList)
+    const current = this.navs()[index]
+    const next = this.navs()[index + 1]
+    this.navs.update((prev) => {
+      prev[index + 1] = current
+      prev[index] = next
+      setNavs(prev)
+      return prev
+    })
   }
 
   // 上移二级
@@ -348,11 +437,14 @@ export default class WebpComponent {
       if (index === 0) {
         return
       }
-      const current = this.websiteList[this.oneIndex].nav[index]
-      const prev = this.websiteList[this.oneIndex].nav[index - 1]
-      this.websiteList[this.oneIndex].nav[index - 1] = current
-      this.websiteList[this.oneIndex].nav[index] = prev
-      setWebsiteList(this.websiteList)
+      const current = this.navs()[this.oneIndex].nav[index]
+      const prevData = this.navs()[this.oneIndex].nav[index - 1]
+      this.navs.update((prev) => {
+        prev[this.oneIndex].nav[index - 1] = current
+        prev[this.oneIndex].nav[index] = prevData
+        setNavs(prev)
+        return prev
+      })
     } catch (error: any) {
       this.notification.error($t('_error'), error.message)
     }
@@ -361,14 +453,17 @@ export default class WebpComponent {
   // 下移二级
   moveTwoDown(index: number): void {
     try {
-      if (index === this.websiteList[this.oneIndex].nav.length - 1) {
+      if (index === this.navs()[this.oneIndex].nav.length - 1) {
         return
       }
-      const current = this.websiteList[this.oneIndex].nav[index]
-      const next = this.websiteList[this.oneIndex].nav[index + 1]
-      this.websiteList[this.oneIndex].nav[index + 1] = current
-      this.websiteList[this.oneIndex].nav[index] = next
-      setWebsiteList(this.websiteList)
+      const current = this.navs()[this.oneIndex].nav[index]
+      const next = this.navs()[this.oneIndex].nav[index + 1]
+      this.navs.update((prev) => {
+        prev[this.oneIndex].nav[index + 1] = current
+        prev[this.oneIndex].nav[index] = next
+        setNavs(prev)
+        return prev
+      })
     } catch (error: any) {
       this.notification.error($t('_error'), error.message)
     }
@@ -380,14 +475,16 @@ export default class WebpComponent {
       if (index === 0) {
         return
       }
-      const current =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index]
-      const prev =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index - 1]
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index - 1] =
-        current
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index] = prev
-      setWebsiteList(this.websiteList)
+      const current = this.navs()[this.oneIndex].nav[this.twoIndex].nav[index]
+      const prevData =
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav[index - 1]
+
+      this.navs.update((prev) => {
+        prev[this.oneIndex].nav[this.twoIndex].nav[index - 1] = current
+        prev[this.oneIndex].nav[this.twoIndex].nav[index] = prevData
+        setNavs(prev)
+        return prev
+      })
     } catch (error: any) {
       this.notification.error($t('_error'), error.message)
     }
@@ -398,18 +495,19 @@ export default class WebpComponent {
     try {
       if (
         index ===
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav.length - 1
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav.length - 1
       ) {
         return
       }
-      const current =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index]
-      const next =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index + 1]
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index + 1] =
-        current
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[index] = next
-      setWebsiteList(this.websiteList)
+      const current = this.navs()[this.oneIndex].nav[this.twoIndex].nav[index]
+      const next = this.navs()[this.oneIndex].nav[this.twoIndex].nav[index + 1]
+
+      this.navs.update((prev) => {
+        prev[this.oneIndex].nav[this.twoIndex].nav[index + 1] = current
+        prev[this.oneIndex].nav[this.twoIndex].nav[index] = next
+        setNavs(prev)
+        return prev
+      })
     } catch (error: any) {
       this.notification.error($t('_error'), error.message)
     }
@@ -422,18 +520,22 @@ export default class WebpComponent {
         return
       }
       const current =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex]
-          .nav[index]
-      const prev =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex]
-          .nav[index - 1]
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[
-        this.threeIndex
-      ].nav[index - 1] = current
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[
-        this.threeIndex
-      ].nav[index] = prev
-      setWebsiteList(this.websiteList)
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[
+          index
+        ]
+      const prevData =
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[
+          index - 1
+        ]
+      this.navs.update((prev) => {
+        prev[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[
+          index - 1
+        ] = current
+        prev[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[index] =
+          prevData
+        setNavs(prev)
+        return prev
+      })
     } catch (error: any) {
       this.notification.error($t('_error'), error.message)
     }
@@ -444,25 +546,29 @@ export default class WebpComponent {
     try {
       if (
         index ===
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex]
-          .nav.length -
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav
+          .length -
           1
       ) {
         return
       }
       const current =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex]
-          .nav[index]
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[
+          index
+        ]
       const next =
-        this.websiteList[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex]
-          .nav[index + 1]
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[
-        this.threeIndex
-      ].nav[index + 1] = current
-      this.websiteList[this.oneIndex].nav[this.twoIndex].nav[
-        this.threeIndex
-      ].nav[index] = next
-      setWebsiteList(this.websiteList)
+        this.navs()[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[
+          index + 1
+        ]
+      this.navs.update((prev) => {
+        prev[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[
+          index + 1
+        ] = current
+        prev[this.oneIndex].nav[this.twoIndex].nav[this.threeIndex].nav[index] =
+          next
+        setNavs(prev)
+        return prev
+      })
     } catch (error: any) {
       this.notification.error($t('_error'), error.message)
     }
@@ -519,7 +625,7 @@ export default class WebpComponent {
 
         updateFileContent({
           message: 'update db',
-          content: JSON.stringify(this.websiteList),
+          content: JSON.stringify(cleanWebAttrs(this.navs())),
           path: DB_PATH,
         })
           .then(() => {

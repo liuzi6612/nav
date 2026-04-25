@@ -10,15 +10,27 @@ import {
   ViewChild,
   ElementRef,
 } from '@angular/core'
+import { Router } from '@angular/router'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import { NzMessageService } from 'ng-zorro-antd/message'
-import { verifyToken, createBranch, authorName } from 'src/api'
-import { setToken, removeToken, removeWebsite } from 'src/utils/user'
+import {
+  verifyToken,
+  createBranch,
+  authorName,
+  isStandaloneImage,
+} from 'src/api'
+import {
+  setToken,
+  removeToken,
+  removeWebsite,
+  setImageToken,
+} from 'src/utils/user'
 import { $t } from 'src/locale'
 import { isSelfDevelop } from 'src/utils/utils'
 import { NzModalModule } from 'ng-zorro-antd/modal'
 import { NzInputModule } from 'ng-zorro-antd/input'
+import config from '../../../nav.config.json'
 
 @Component({
   standalone: true,
@@ -35,9 +47,18 @@ export class LoginComponent {
   readonly $t = $t
   readonly isSelfDevelop = isSelfDevelop
   token = ''
+  imageToken = ''
   submitting = false
+  showImgToken = false
 
-  constructor(private readonly message: NzMessageService) {}
+  constructor(
+    private readonly message: NzMessageService,
+    private router: Router,
+  ) {
+    if (!isSelfDevelop) {
+      this.showImgToken = isStandaloneImage()
+    }
+  }
 
   ngAfterViewInit(): void {
     this.inputFocus()
@@ -45,12 +66,13 @@ export class LoginComponent {
 
   handleCancel(): void {
     this.onCancel.emit()
+    this.router.navigate(['/'])
   }
 
   private inputFocus(): void {
     setTimeout(() => {
       this.input?.nativeElement?.focus()
-    }, 300)
+    }, 500)
   }
 
   onKey(event: KeyboardEvent): void {
@@ -60,17 +82,41 @@ export class LoginComponent {
   }
 
   async login(): Promise<void> {
-    if (!this.token) {
+    const token = this.token.trim()
+    if (!token) {
       this.message.error($t('_pleaseInputToken'))
       return
     }
 
-    const token = this.token.trim()
+    if (this.showImgToken) {
+      const token = this.imageToken.trim()
+      if (!token) {
+        this.message.error('Please enter the image TOKEN')
+        return
+      }
+      try {
+        this.submitting = true
+        const authorName = config.imageRepoUrl.split('/').at(-2)
+        const res = await verifyToken(token, config.imageRepoUrl)
+        if ((res?.data?.login ?? res?.data?.username) !== authorName) {
+          this.message.error('Image Bad credentials')
+          return
+        }
+        setImageToken(token)
+      } catch {
+      } finally {
+        this.submitting = false
+      }
+    }
+
     this.submitting = true
 
     try {
       const res = await verifyToken(token)
-      if (!isSelfDevelop && res?.data?.login !== authorName) {
+      if (
+        !isSelfDevelop &&
+        (res?.data?.login ?? res?.data?.username) !== authorName
+      ) {
         this.message.error('Bad credentials')
         throw new Error('Bad credentials')
       }

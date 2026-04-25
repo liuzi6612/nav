@@ -3,14 +3,10 @@
   nzType="primary"
   (click)="handleSubmit()"
   [nzLoading]="submitting"
-  class="mb-4"
+  style="margin: 10px 0"
 >
   {{ $t('_save') }}
 </button>
-
-<div class="mb-4 !text-red-500 font-bold" *ngIf="!isSelfDevelop">
-  {{ $t('_buildTip') }}
-</div>
 
 <div class="mb-4">
   <div class="flex items-center">
@@ -36,11 +32,15 @@
       <app-countdown *ngSwitchCase="ComponentType.Countdown" [data]="item" />
       <app-html *ngSwitchCase="ComponentType.HTML" [data]="item" />
       <app-holiday *ngSwitchCase="ComponentType.Holiday" [data]="item" />
+      <app-news *ngSwitchCase="ComponentType.News" [data]="item" />
+      <app-carousel *ngSwitchCase="ComponentType.Carousel" [data]="item" />
     </ng-container>
 
     <div class="text-center mt-3">
       <div>{{ componentTitleMap[item.type] }}</div>
-      <a (click)="moveUp(idx)">{{ $t('_moveUp') }}</a>
+      <a (click)="moveUp(idx)" [class.hidden]="idx === 0">{{
+        $t('_moveUp')
+      }}</a>
       <a (click)="moveDown(idx)" class="mx-2.5">{{ $t('_moveDown') }}</a>
       <a (click)="handleEdit(item, idx)">{{ $t('_edit') }}</a>
       <div>
@@ -67,3 +67,5 @@
 <countdown-drawer #countdown (ok)="handleOk($event)" />
 <html-drawer #html (ok)="handleOk($event)" />
 <holiday-drawer #holiday (ok)="handleOk($event)" />
+<news-drawer #news (ok)="handleOk($event)" />
+<carousel-drawer #carousel (ok)="handleOk($event)" />

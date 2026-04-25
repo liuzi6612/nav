@@ -1,22 +1,13 @@
 <nz-modal
   [nzWidth]="570"
   [(nzVisible)]="showModal"
-  [nzTitle]="detail ? $t('_edit') : $t('_add')"
+  [nzTitle]="modalTitle"
   (nzOnCancel)="onClose()"
   [nzBodyStyle]="{ maxHeight: '70vh', overflowY: 'auto' }"
   [nzContent]="modalContent"
   [nzFooter]="modalFooter"
 >
   <ng-template #modalContent>
-    <div class="breadcrumb1" *ngIf="detail && detail.breadcrumb">
-      <span *ngFor="let n of detail.breadcrumb; let idx = index"
-        >{{ n }}
-        <span class="arrow" *ngIf="idx !== detail.breadcrumb.length - 1"
-          >/</span
-        ></span
-      >
-    </div>
-
     <form nz-form [formGroup]="validateForm">
       <nz-form-item>
         <nz-form-label [nzSpan]="4" nzRequired>{{
@@ -26,7 +17,7 @@
           <input
             formControlName="url"
             nz-input
-            (blur)="onUrlBlur($event)"
+            (blur)="onUrlBlur()"
             #inputUrl
           />
         </nz-form-control>
@@ -39,9 +30,10 @@
         <nz-form-control [nzSpan]="20" [nzErrorTip]="$t('_requiredName')">
           <nz-input-group nzSearch [nzAddOnAfter]="suffixButton">
             <input
+              #inputTitle
               formControlName="title"
               nz-input
-              [readonly]="getting"
+              [readonly]="getting || translating"
               [placeholder]="getting ? $t('_pendingGet') : ''"
             />
           </nz-input-group>
@@ -49,6 +41,7 @@
       </nz-form-item>
       <ng-template #suffixButton>
         <button
+          *ngIf="isLogin"
           [disabled]="!title"
           [nzLoading]="translating"
           nz-button
@@ -67,7 +60,7 @@
             formControlName="index"
             nz-input
             type="number"
-            placeholder="100000"
+            [placeholder]="DEFAULT_SORT_INDEX"
           />
         </nz-form-control>
       </nz-form-item>
@@ -79,7 +72,8 @@
 
           <nz-checkbox-group
             *ngIf="isTop"
-            formControlName="topOptions"
+            [nzOptions]="topOptions"
+            formControlName="topTypes"
           ></nz-checkbox-group>
         </nz-form-control>
       </nz-form-item>
@@ -120,9 +114,9 @@
           </ng-template>
           <ng-template #suffixIconSearch>
             <ng-content *ngIf="isLogin">
-              <app-upload
+              <app-upload-image
                 (onChange)="onChangeFile($event, 'icon')"
-              ></app-upload>
+              ></app-upload-image>
             </ng-content>
           </ng-template>
         </nz-form-control>
@@ -156,7 +150,9 @@
       </nz-form-item>
       <ng-template #suffixImgButton>
         <span class="mx-2">
-          <app-upload (onChange)="onChangeFile($event, 'img')"></app-upload>
+          <app-upload-image
+            (onChange)="onChangeFile($event, 'img')"
+          ></app-upload-image>
         </span>
         <button
           [nzLoading]="submitting"
@@ -173,12 +169,12 @@
         <nz-form-label [nzSpan]="4">{{ $t('_webDesc') }}</nz-form-label>
         <nz-form-control [nzSpan]="20">
           <textarea
+            #inputDesc
             formControlName="desc"
             nz-input
             [nzAutosize]="{ minRows: 3, maxRows: 5 }"
-            [readonly]="getting"
+            [readonly]="getting || translating"
             [placeholder]="getting ? $t('_pendingGet') : ''"
-            class="dark-scrollbar"
           >
           </textarea>
         </nz-form-control>
@@ -211,7 +207,7 @@
                 (ngModelChange)="onSelectChange(idx)"
               >
                 <nz-option
-                  *ngFor="let tag of tagList"
+                  *ngFor="let tag of tagList()"
                   [nzLabel]="tag.name"
                   [nzValue]="tag.id"
                 >
@@ -232,7 +228,7 @@
         </nz-form-item>
       </div>
 
-      <nz-form-item *ngIf="tagList.length > 0">
+      <nz-form-item *ngIf="tagList().length > 0">
         <nz-form-label [nzSpan]="4" [nzNoColon]="true"></nz-form-label>
         <nz-form-control [nzSpan]="20">
           <button nz-button nzType="default" nzBlock (click)="addMoreUrl()">
@@ -248,6 +244,7 @@
       {{ $t('_cancel') }}
     </button>
     <button
+      *ngIf="isLogin"
       [disabled]="!desc"
       nz-button
       nzType="primary"
@@ -257,10 +254,10 @@
       {{ $t('_translate') }}
     </button>
     <button
-      *ngIf="parentId !== -1"
       nz-button
       nzType="primary"
       (click)="checkRepeat()"
+      [disabled]="!url"
     >
       <nz-icon nzType="search" />
       {{ $t('_checkRepeat') }}
